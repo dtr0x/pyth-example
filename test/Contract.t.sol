@@ -36,19 +36,29 @@ contract Contract is Test {
         url = string.concat(url, Strings.toString(block.timestamp - 60));
         (uint256 status, bytes memory data) = url.get(headers);
         if (status != 200) revert("Bad request");
+
+        // this is the index of the first " enclosing the base64 VAA string
         uint256 firstIndex = 8;
+
         uint256 lastIndex;
+        // find the last index by getting the next " (0x22 in hex)
         for (uint256 i = firstIndex + 1; lastIndex == 0; ++i) {
             if (data[i] == bytes1(0x22)) {
                 lastIndex = i;
             }
         }
+
+        // put the VAA in a new bytes array
         bytes memory priceUpdateBytes;
         for (uint256 i = firstIndex; i < lastIndex; ++i) {
             priceUpdateBytes = bytes.concat(priceUpdateBytes, data[i]);
-        } 
+        }
+
         bytes[] memory priceUpdateData = new bytes[](1);
+
+        // priceUpdateBytes in base64, decode to binary
         priceUpdateData[0] = Base64.decode(string(priceUpdateBytes));
+
         uint fee = pyth.getUpdateFee(priceUpdateData);
         pyth.updatePriceFeeds{value: fee}(priceUpdateData);
     }
